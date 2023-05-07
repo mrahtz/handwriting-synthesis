@@ -1,8 +1,16 @@
 import tensorflow as tf
 
 
-def dense_layer(inputs, output_units, bias=True, activation=None, batch_norm=None,
-                dropout=None, scope='dense-layer', reuse=False):
+def dense_layer(
+    inputs,
+    output_units,
+    bias=True,
+    activation=None,
+    batch_norm=None,
+    dropout=None,
+    scope="dense-layer",
+    reuse=False,
+):
     """
     Applies a dense layer to a 2D tensor of shape [batch_size, input_units]
     to produce a tensor of shape [batch_size, output_units].
@@ -16,16 +24,16 @@ def dense_layer(inputs, output_units, bias=True, activation=None, batch_norm=Non
     """
     with tf.variable_scope(scope, reuse=reuse):
         W = tf.get_variable(
-            name='weights',
+            name="weights",
             initializer=tf.contrib.layers.variance_scaling_initializer(),
-            shape=[shape(inputs, -1), output_units]
+            shape=[shape(inputs, -1), output_units],
         )
         z = tf.matmul(inputs, W)
         if bias:
             b = tf.get_variable(
-                name='biases',
+                name="biases",
                 initializer=tf.constant_initializer(),
-                shape=[output_units]
+                shape=[output_units],
             )
             z = z + b
 
@@ -38,8 +46,15 @@ def dense_layer(inputs, output_units, bias=True, activation=None, batch_norm=Non
 
 
 def time_distributed_dense_layer(
-        inputs, output_units, bias=True, activation=None, batch_norm=None,
-        dropout=None, scope='time-distributed-dense-layer', reuse=False):
+    inputs,
+    output_units,
+    bias=True,
+    activation=None,
+    batch_norm=None,
+    dropout=None,
+    scope="time-distributed-dense-layer",
+    reuse=False,
+):
     """
     Applies a shared dense layer to each timestep of a tensor of shape
     [batch_size, max_seq_len, input_units] to produce a tensor of shape
@@ -56,16 +71,16 @@ def time_distributed_dense_layer(
     """
     with tf.variable_scope(scope, reuse=reuse):
         W = tf.get_variable(
-            name='weights',
+            name="weights",
             initializer=tf.contrib.layers.variance_scaling_initializer(),
-            shape=[shape(inputs, -1), output_units]
+            shape=[shape(inputs, -1), output_units],
         )
-        z = tf.einsum('ijk,kl->ijl', inputs, W)
+        z = tf.einsum("ijk,kl->ijl", inputs, W)
         if bias:
             b = tf.get_variable(
-                name='biases',
+                name="biases",
                 initializer=tf.constant_initializer(),
-                shape=[output_units]
+                shape=[output_units],
             )
             z = z + b
 

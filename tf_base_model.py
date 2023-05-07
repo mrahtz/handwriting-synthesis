@@ -54,9 +54,9 @@ class TFBaseModel(object):
         reader=None,
         batch_sizes=[128],
         num_training_steps=20000,
-        learning_rates=[.01],
-        beta1_decays=[.99],
-        optimizer='adam',
+        learning_rates=[0.01],
+        beta1_decays=[0.99],
+        optimizer="adam",
         grad_clip=5,
         regularization_constant=0.0,
         keep_prob=1.0,
@@ -68,11 +68,10 @@ class TFBaseModel(object):
         logging_level=logging.INFO,
         loss_averaging_window=100,
         validation_batch_size=64,
-        log_dir='logs',
-        checkpoint_dir='checkpoints',
-        prediction_dir='predictions',
+        log_dir="logs",
+        checkpoint_dir="checkpoints",
+        prediction_dir="predictions",
     ):
-
         assert len(batch_sizes) == len(learning_rates) == len(patiences)
         self.batch_sizes = batch_sizes
         self.learning_rates = learning_rates
@@ -100,14 +99,14 @@ class TFBaseModel(object):
         self.prediction_dir = prediction_dir
         self.checkpoint_dir = checkpoint_dir
         if self.enable_parameter_averaging:
-            self.checkpoint_dir_averaged = checkpoint_dir + '_avg'
+            self.checkpoint_dir_averaged = checkpoint_dir + "_avg"
 
         self.init_logging(self.log_dir)
-        logging.info('\nnew run with parameters:\n{}'.format(pp.pformat(self.__dict__)))
+        logging.info("\nnew run with parameters:\n{}".format(pp.pformat(self.__dict__)))
 
         self.graph = self.build_graph()
         self.session = tf.Session(graph=self.graph)
-        logging.info('built graph')
+        logging.info("built graph")
 
     def update_train_params(self):
         self.batch_size = self.batch_sizes[self.restart_idx]
@@ -116,11 +115,10 @@ class TFBaseModel(object):
         self.early_stopping_steps = self.patiences[self.restart_idx]
 
     def calculate_loss(self):
-        raise NotImplementedError('subclass must implement this')
+        raise NotImplementedError("subclass must implement this")
 
     def fit(self):
         with self.session.as_default():
-
             if self.warm_start_init_step:
                 self.restore(self.warm_start_init_step)
                 step = self.warm_start_init_step
@@ -135,33 +133,38 @@ class TFBaseModel(object):
             val_loss_history = deque(maxlen=self.loss_averaging_window)
             train_time_history = deque(maxlen=self.loss_averaging_window)
             val_time_history = deque(maxlen=self.loss_averaging_window)
-            if not hasattr(self, 'metrics'):
+            if not hasattr(self, "metrics"):
                 self.metrics = {}
 
             metric_histories = {
-                metric_name: deque(maxlen=self.loss_averaging_window) for metric_name in self.metrics
+                metric_name: deque(maxlen=self.loss_averaging_window)
+                for metric_name in self.metrics
             }
-            best_validation_loss, best_validation_tstep = float('inf'), 0
+            best_validation_loss, best_validation_tstep = float("inf"), 0
 
             while step < self.num_training_steps:
-
                 # validation evaluation
                 val_start = time.time()
                 val_batch_df = next(val_generator)
                 val_feed_dict = {
                     getattr(self, placeholder_name, None): data
-                    for placeholder_name, data in val_batch_df.items() if hasattr(self, placeholder_name)
+                    for placeholder_name, data in val_batch_df.items()
+                    if hasattr(self, placeholder_name)
                 }
 
-                val_feed_dict.update({self.learning_rate_var: self.learning_rate, self.beta1_decay_var: self.beta1_decay})
-                if hasattr(self, 'keep_prob'):
+                val_feed_dict.update(
+                    {
+                        self.learning_rate_var: self.learning_rate,
+                        self.beta1_decay_var: self.beta1_decay,
+                    }
+                )
+                if hasattr(self, "keep_prob"):
                     val_feed_dict.update({self.keep_prob: 1.0})
-                if hasattr(self, 'is_training'):
+                if hasattr(self, "is_training"):
                     val_feed_dict.update({self.is_training: False})
 
                 results = self.session.run(
-                    fetches=[self.loss] + self.metrics.values(),
-                    feed_dict=val_feed_dict
+                    fetches=[self.loss] + self.metrics.values(), feed_dict=val_feed_dict
                 )
                 val_loss = results[0]
                 val_metrics = results[1:] if len(results) > 1 else []
@@ -171,15 +174,15 @@ class TFBaseModel(object):
                 for key in val_metrics:
                     metric_histories[key].append(val_metrics[key])
 
-                if hasattr(self, 'monitor_tensors'):
+                if hasattr(self, "monitor_tensors"):
                     for name, tensor in self.monitor_tensors.items():
                         [np_val] = self.session.run([tensor], feed_dict=val_feed_dict)
                         print(name)
-                        print('min', np_val.min())
-                        print('max', np_val.max())
-                        print('mean', np_val.mean())
-                        print('std', np_val.std())
-                        print('nans', np.isnan(np_val).sum())
+                        print("min", np_val.min())
+                        print("max", np_val.max())
+                        print("mean", np_val.mean())
+                        print("std", np_val.std())
+                        print("nans", np.isnan(np_val).sum())
                         print()
                     print()
                     print()
@@ -189,18 +192,23 @@ class TFBaseModel(object):
                 train_batch_df = next(train_generator)
                 train_feed_dict = {
                     getattr(self, placeholder_name, None): data
-                    for placeholder_name, data in train_batch_df.items() if hasattr(self, placeholder_name)
+                    for placeholder_name, data in train_batch_df.items()
+                    if hasattr(self, placeholder_name)
                 }
 
-                train_feed_dict.update({self.learning_rate_var: self.learning_rate, self.beta1_decay_var: self.beta1_decay})
-                if hasattr(self, 'keep_prob'):
+                train_feed_dict.update(
+                    {
+                        self.learning_rate_var: self.learning_rate,
+                        self.beta1_decay_var: self.beta1_decay,
+                    }
+                )
+                if hasattr(self, "keep_prob"):
                     train_feed_dict.update({self.keep_prob: self.keep_prob_scalar})
-                if hasattr(self, 'is_training'):
+                if hasattr(self, "is_training"):
                     train_feed_dict.update({self.is_training: True})
 
                 train_loss, _ = self.session.run(
-                    fetches=[self.loss, self.step],
-                    feed_dict=train_feed_dict
+                    fetches=[self.loss, self.step], feed_dict=train_feed_dict
                 )
                 train_loss_history.append(train_loss)
                 train_time_history.append(time.time() - train_start)
@@ -224,7 +232,9 @@ class TFBaseModel(object):
                     early_stopping_metric = avg_val_loss
                     for metric_name, metric_history in metric_histories.items():
                         metric_val = sum(metric_history) / len(metric_history)
-                        metric_log += '{}: {:<4}     '.format(metric_name, round(metric_val, 4))
+                        metric_log += "{}: {:<4}     ".format(
+                            metric_name, round(metric_val, 4)
+                        )
                         if metric_name == self.early_stopping_metric:
                             early_stopping_metric = metric_val
 
@@ -239,11 +249,16 @@ class TFBaseModel(object):
                                 self.save(step, averaged=True)
 
                     if step - best_validation_tstep > self.early_stopping_steps:
-
-                        if self.num_restarts is None or self.restart_idx >= self.num_restarts:
-                            logging.info('best validation loss of {} at training step {}'.format(
-                                best_validation_loss, best_validation_tstep))
-                            logging.info('early stopping - ending training.')
+                        if (
+                            self.num_restarts is None
+                            or self.restart_idx >= self.num_restarts
+                        ):
+                            logging.info(
+                                "best validation loss of {} at training step {}".format(
+                                    best_validation_loss, best_validation_tstep
+                                )
+                            )
+                            logging.info("early stopping - ending training.")
                             return
 
                         if self.restart_idx < self.num_restarts:
@@ -251,7 +266,9 @@ class TFBaseModel(object):
                             step = best_validation_tstep
                             self.restart_idx += 1
                             self.update_train_params()
-                            train_generator = self.reader.train_batch_generator(self.batch_size)
+                            train_generator = self.reader.train_batch_generator(
+                                self.batch_size
+                            )
 
                 step += 1
 
@@ -261,103 +278,129 @@ class TFBaseModel(object):
                 if self.enable_parameter_averaging:
                     self.save(step, averaged=True)
 
-            logging.info('num_training_steps reached - ending training')
+            logging.info("num_training_steps reached - ending training")
 
     def predict(self, chunk_size=256):
         if not os.path.isdir(self.prediction_dir):
             os.makedirs(self.prediction_dir)
 
-        if hasattr(self, 'prediction_tensors'):
-            prediction_dict = {tensor_name: [] for tensor_name in self.prediction_tensors}
+        if hasattr(self, "prediction_tensors"):
+            prediction_dict = {
+                tensor_name: [] for tensor_name in self.prediction_tensors
+            }
 
             test_generator = self.reader.test_batch_generator(chunk_size)
             for i, test_batch_df in enumerate(test_generator):
                 if i % 10 == 0:
-                    print(i*len(test_batch_df))
+                    print(i * len(test_batch_df))
 
                 test_feed_dict = {
                     getattr(self, placeholder_name, None): data
-                    for placeholder_name, data in test_batch_df.items() if hasattr(self, placeholder_name)
+                    for placeholder_name, data in test_batch_df.items()
+                    if hasattr(self, placeholder_name)
                 }
-                if hasattr(self, 'keep_prob'):
+                if hasattr(self, "keep_prob"):
                     test_feed_dict.update({self.keep_prob: 1.0})
-                if hasattr(self, 'is_training'):
+                if hasattr(self, "is_training"):
                     test_feed_dict.update({self.is_training: False})
 
                 tensor_names, tf_tensors = zip(*self.prediction_tensors.items())
                 np_tensors = self.session.run(
-                    fetches=tf_tensors,
-                    feed_dict=test_feed_dict
+                    fetches=tf_tensors, feed_dict=test_feed_dict
                 )
                 for tensor_name, tensor in zip(tensor_names, np_tensors):
                     prediction_dict[tensor_name].append(tensor)
 
             for tensor_name, tensor in prediction_dict.items():
                 np_tensor = np.concatenate(tensor, 0)
-                save_file = os.path.join(self.prediction_dir, '{}.npy'.format(tensor_name))
-                logging.info('saving {} with shape {} to {}'.format(tensor_name, np_tensor.shape, save_file))
+                save_file = os.path.join(
+                    self.prediction_dir, "{}.npy".format(tensor_name)
+                )
+                logging.info(
+                    "saving {} with shape {} to {}".format(
+                        tensor_name, np_tensor.shape, save_file
+                    )
+                )
                 np.save(save_file, np_tensor)
 
-        if hasattr(self, 'parameter_tensors'):
+        if hasattr(self, "parameter_tensors"):
             for tensor_name, tensor in self.parameter_tensors.items():
                 np_tensor = tensor.eval(self.session)
 
-                save_file = os.path.join(self.prediction_dir, '{}.npy'.format(tensor_name))
-                logging.info('saving {} with shape {} to {}'.format(tensor_name, np_tensor.shape, save_file))
+                save_file = os.path.join(
+                    self.prediction_dir, "{}.npy".format(tensor_name)
+                )
+                logging.info(
+                    "saving {} with shape {} to {}".format(
+                        tensor_name, np_tensor.shape, save_file
+                    )
+                )
                 np.save(save_file, np_tensor)
 
     def save(self, step, averaged=False):
         saver = self.saver_averaged if averaged else self.saver
-        checkpoint_dir = self.checkpoint_dir_averaged if averaged else self.checkpoint_dir
+        checkpoint_dir = (
+            self.checkpoint_dir_averaged if averaged else self.checkpoint_dir
+        )
         if not os.path.isdir(checkpoint_dir):
-            logging.info('creating checkpoint directory {}'.format(checkpoint_dir))
+            logging.info("creating checkpoint directory {}".format(checkpoint_dir))
             os.mkdir(checkpoint_dir)
 
-        model_path = os.path.join(checkpoint_dir, 'model')
-        logging.info('saving model to {}'.format(model_path))
+        model_path = os.path.join(checkpoint_dir, "model")
+        logging.info("saving model to {}".format(model_path))
         saver.save(self.session, model_path, global_step=step)
 
     def restore(self, step=None, averaged=False):
         saver = self.saver_averaged if averaged else self.saver
-        checkpoint_dir = self.checkpoint_dir_averaged if averaged else self.checkpoint_dir
+        checkpoint_dir = (
+            self.checkpoint_dir_averaged if averaged else self.checkpoint_dir
+        )
         if not step:
             model_path = tf.train.latest_checkpoint(checkpoint_dir)
-            logging.info('restoring model parameters from {}'.format(model_path))
+            logging.info("restoring model parameters from {}".format(model_path))
             saver.restore(self.session, model_path)
         else:
             model_path = os.path.join(
-                checkpoint_dir, 'model{}-{}'.format('_avg' if averaged else '', step)
+                checkpoint_dir, "model{}-{}".format("_avg" if averaged else "", step)
             )
-            logging.info('restoring model from {}'.format(model_path))
+            logging.info("restoring model from {}".format(model_path))
             saver.restore(self.session, model_path)
 
     def init_logging(self, log_dir):
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
 
-        date_str = datetime.now().strftime('%Y-%m-%d_%H-%M')
-        log_file = 'log_{}.txt'.format(date_str)
+        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        log_file = "log_{}.txt".format(date_str)
 
-        try:                 # Python 2
+        try:  # Python 2
             reload(logging)  # bad
-        except NameError:    # Python 3
+        except NameError:  # Python 3
             import logging
         logging.basicConfig(
             filename=os.path.join(log_dir, log_file),
             level=self.logging_level,
-            format='[[%(asctime)s]] %(message)s',
-            datefmt='%m/%d/%Y %I:%M:%S %p'
+            format="[[%(asctime)s]] %(message)s",
+            datefmt="%m/%d/%Y %I:%M:%S %p",
         )
         logging.getLogger().addHandler(logging.StreamHandler())
 
     def update_parameters(self, loss):
         if self.regularization_constant != 0:
-            l2_norm = tf.reduce_sum([tf.sqrt(tf.reduce_sum(tf.square(param))) for param in tf.trainable_variables()])
-            loss = loss + self.regularization_constant*l2_norm
+            l2_norm = tf.reduce_sum(
+                [
+                    tf.sqrt(tf.reduce_sum(tf.square(param)))
+                    for param in tf.trainable_variables()
+                ]
+            )
+            loss = loss + self.regularization_constant * l2_norm
 
         optimizer = self.get_optimizer(self.learning_rate_var, self.beta1_decay_var)
         grads = optimizer.compute_gradients(loss)
-        clipped = [(tf.clip_by_value(g, -self.grad_clip, self.grad_clip), v_) for g, v_ in grads]
+        clipped = [
+            (tf.clip_by_value(g, -self.grad_clip, self.grad_clip), v_)
+            for g, v_ in grads
+        ]
 
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
@@ -370,24 +413,32 @@ class TFBaseModel(object):
         else:
             self.step = step
 
-        logging.info('all parameters:')
-        logging.info(pp.pformat([(var.name, shape(var)) for var in tf.global_variables()]))
+        logging.info("all parameters:")
+        logging.info(
+            pp.pformat([(var.name, shape(var)) for var in tf.global_variables()])
+        )
 
-        logging.info('trainable parameters:')
-        logging.info(pp.pformat([(var.name, shape(var)) for var in tf.trainable_variables()]))
+        logging.info("trainable parameters:")
+        logging.info(
+            pp.pformat([(var.name, shape(var)) for var in tf.trainable_variables()])
+        )
 
-        logging.info('trainable parameter count:')
-        logging.info(str(np.sum(np.prod(shape(var)) for var in tf.trainable_variables())))
+        logging.info("trainable parameter count:")
+        logging.info(
+            str(np.sum(np.prod(shape(var)) for var in tf.trainable_variables()))
+        )
 
     def get_optimizer(self, learning_rate, beta1_decay):
-        if self.optimizer == 'adam':
+        if self.optimizer == "adam":
             return tf.train.AdamOptimizer(learning_rate, beta1=beta1_decay)
-        elif self.optimizer == 'gd':
+        elif self.optimizer == "gd":
             return tf.train.GradientDescentOptimizer(learning_rate)
-        elif self.optimizer == 'rms':
-            return tf.train.RMSPropOptimizer(learning_rate, decay=beta1_decay, momentum=0.9)
+        elif self.optimizer == "rms":
+            return tf.train.RMSPropOptimizer(
+                learning_rate, decay=beta1_decay, momentum=0.9
+            )
         else:
-            assert False, 'optimizer must be adam, gd, or rms'
+            assert False, "optimizer must be adam, gd, or rms"
 
     def build_graph(self):
         with tf.Graph().as_default() as graph:
@@ -401,7 +452,9 @@ class TFBaseModel(object):
 
             self.saver = tf.train.Saver(max_to_keep=1)
             if self.enable_parameter_averaging:
-                self.saver_averaged = tf.train.Saver(self.ema.variables_to_restore(), max_to_keep=1)
+                self.saver_averaged = tf.train.Saver(
+                    self.ema.variables_to_restore(), max_to_keep=1
+                )
 
             self.init = tf.global_variables_initializer()
             return graph

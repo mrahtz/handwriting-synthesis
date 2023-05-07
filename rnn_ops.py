@@ -42,13 +42,21 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
                 varscope.set_caching_device(lambda op: op.device)
 
         time = constant_op.constant(0, dtype=dtypes.int32)
-        (elements_finished, next_input, initial_state, emit_structure,
-         init_loop_state) = loop_fn(time, None, None, None)
+        (
+            elements_finished,
+            next_input,
+            initial_state,
+            emit_structure,
+            init_loop_state,
+        ) = loop_fn(time, None, None, None)
         flat_input = nest.flatten(next_input)
 
         # Need a surrogate loop state for the while_loop if none is available.
-        loop_state = (init_loop_state if init_loop_state is not None
-                      else constant_op.constant(0, dtype=dtypes.int32))
+        loop_state = (
+            init_loop_state
+            if init_loop_state is not None
+            else constant_op.constant(0, dtype=dtypes.int32)
+        )
 
         input_shape = [input_.get_shape() for input_ in flat_input]
         static_batch_size = input_shape[0][0]
@@ -66,66 +74,89 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
         state = initial_state
         flat_state = nest.flatten(state)
         flat_state = [ops.convert_to_tensor(s) for s in flat_state]
-        state = nest.pack_sequence_as(structure=state,
-                                      flat_sequence=flat_state)
+        state = nest.pack_sequence_as(structure=state, flat_sequence=flat_state)
 
         if emit_structure is not None:
             flat_emit_structure = nest.flatten(emit_structure)
-            flat_emit_size = [emit.shape if emit.shape.is_fully_defined() else
-                              array_ops.shape(emit) for emit in flat_emit_structure]
+            flat_emit_size = [
+                emit.shape if emit.shape.is_fully_defined() else array_ops.shape(emit)
+                for emit in flat_emit_structure
+            ]
             flat_emit_dtypes = [emit.dtype for emit in flat_emit_structure]
         else:
             emit_structure = cell.output_size
             flat_emit_size = nest.flatten(emit_structure)
             flat_emit_dtypes = [flat_state[0].dtype] * len(flat_emit_size)
 
-        flat_state_size = [s.shape if s.shape.is_fully_defined() else
-                           array_ops.shape(s) for s in flat_state]
+        flat_state_size = [
+            s.shape if s.shape.is_fully_defined() else array_ops.shape(s)
+            for s in flat_state
+        ]
         flat_state_dtypes = [s.dtype for s in flat_state]
 
         flat_emit_ta = [
             tensor_array_ops.TensorArray(
                 dtype=dtype_i,
                 dynamic_size=True,
-                element_shape=(tensor_shape.TensorShape([const_batch_size])
-                               .concatenate(_maybe_tensor_shape_from_tensor(size_i))),
+                element_shape=(
+                    tensor_shape.TensorShape([const_batch_size]).concatenate(
+                        _maybe_tensor_shape_from_tensor(size_i)
+                    )
+                ),
                 size=0,
-                name="rnn_output_%d" % i
+                name="rnn_output_%d" % i,
             )
             for i, (dtype_i, size_i) in enumerate(zip(flat_emit_dtypes, flat_emit_size))
         ]
-        emit_ta = nest.pack_sequence_as(structure=emit_structure, flat_sequence=flat_emit_ta)
+        emit_ta = nest.pack_sequence_as(
+            structure=emit_structure, flat_sequence=flat_emit_ta
+        )
         flat_zero_emit = [
             array_ops.zeros(_concat(batch_size, size_i), dtype_i)
-            for size_i, dtype_i in zip(flat_emit_size, flat_emit_dtypes)]
+            for size_i, dtype_i in zip(flat_emit_size, flat_emit_dtypes)
+        ]
 
-        zero_emit = nest.pack_sequence_as(structure=emit_structure, flat_sequence=flat_zero_emit)
+        zero_emit = nest.pack_sequence_as(
+            structure=emit_structure, flat_sequence=flat_zero_emit
+        )
 
         flat_state_ta = [
             tensor_array_ops.TensorArray(
                 dtype=dtype_i,
                 dynamic_size=True,
-                element_shape=(tensor_shape.TensorShape([const_batch_size])
-                               .concatenate(_maybe_tensor_shape_from_tensor(size_i))),
+                element_shape=(
+                    tensor_shape.TensorShape([const_batch_size]).concatenate(
+                        _maybe_tensor_shape_from_tensor(size_i)
+                    )
+                ),
                 size=0,
-                name="rnn_state_%d" % i
+                name="rnn_state_%d" % i,
             )
-            for i, (dtype_i, size_i) in enumerate(zip(flat_state_dtypes, flat_state_size))
+            for i, (dtype_i, size_i) in enumerate(
+                zip(flat_state_dtypes, flat_state_size)
+            )
         ]
         state_ta = nest.pack_sequence_as(structure=state, flat_sequence=flat_state_ta)
 
         def condition(unused_time, elements_finished, *_):
             return math_ops.logical_not(math_ops.reduce_all(elements_finished))
 
-        def body(time, elements_finished, current_input, state_ta, emit_ta, state, loop_state):
+        def body(
+            time, elements_finished, current_input, state_ta, emit_ta, state, loop_state
+        ):
             (next_output, cell_state) = cell(current_input, state)
 
             nest.assert_same_structure(state, cell_state)
             nest.assert_same_structure(cell.output_size, next_output)
 
             next_time = time + 1
-            (next_finished, next_input, next_state, emit_output,
-             next_loop_state) = loop_fn(next_time, next_output, cell_state, loop_state)
+            (
+                next_finished,
+                next_input,
+                next_state,
+                emit_output,
+                next_loop_state,
+            ) = loop_fn(next_time, next_output, cell_state, loop_state)
 
             nest.assert_same_structure(state, next_state)
             nest.assert_same_structure(current_input, next_input)
@@ -136,6 +167,7 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
 
             def _copy_some_through(current, candidate):
                 """Copy some tensors through via array_ops.where."""
+
                 def copy_fn(cur_i, cand_i):
                     # TensorArray and scalar get passed through.
                     if isinstance(cur_i, tensor_array_ops.TensorArray):
@@ -145,25 +177,45 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
                     # Otherwise propagate the old or the new value.
                     with ops.colocate_with(cand_i):
                         return array_ops.where(elements_finished, cur_i, cand_i)
+
                 return nest.map_structure(copy_fn, current, candidate)
 
             emit_output = _copy_some_through(zero_emit, emit_output)
             next_state = _copy_some_through(state, next_state)
 
-            emit_ta = nest.map_structure(lambda ta, emit: ta.write(time, emit), emit_ta, emit_output)
-            state_ta = nest.map_structure(lambda ta, state: ta.write(time, state), state_ta, next_state)
+            emit_ta = nest.map_structure(
+                lambda ta, emit: ta.write(time, emit), emit_ta, emit_output
+            )
+            state_ta = nest.map_structure(
+                lambda ta, state: ta.write(time, state), state_ta, next_state
+            )
 
             elements_finished = math_ops.logical_or(elements_finished, next_finished)
 
-            return (next_time, elements_finished, next_input, state_ta,
-                    emit_ta, next_state, loop_state)
+            return (
+                next_time,
+                elements_finished,
+                next_input,
+                state_ta,
+                emit_ta,
+                next_state,
+                loop_state,
+            )
 
         returned = control_flow_ops.while_loop(
-            condition, body, loop_vars=[
-                time, elements_finished, next_input, state_ta,
-                emit_ta, state, loop_state],
+            condition,
+            body,
+            loop_vars=[
+                time,
+                elements_finished,
+                next_input,
+                state_ta,
+                emit_ta,
+                state,
+                loop_state,
+            ],
             parallel_iterations=parallel_iterations,
-            swap_memory=swap_memory
+            swap_memory=swap_memory,
         )
 
         (state_ta, emit_ta, final_state, final_loop_state) = returned[-4:]
@@ -173,19 +225,25 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
         states = nest.pack_sequence_as(structure=state_ta, flat_sequence=flat_states)
 
         flat_outputs = nest.flatten(emit_ta)
-        flat_outputs = [array_ops.transpose(ta.stack(), (1, 0, 2)) for ta in flat_outputs]
+        flat_outputs = [
+            array_ops.transpose(ta.stack(), (1, 0, 2)) for ta in flat_outputs
+        ]
         outputs = nest.pack_sequence_as(structure=emit_ta, flat_sequence=flat_outputs)
 
         return (states, outputs, final_state)
 
 
-def rnn_teacher_force(inputs, cell, sequence_length, initial_state, scope='dynamic-rnn-teacher-force'):
+def rnn_teacher_force(
+    inputs, cell, sequence_length, initial_state, scope="dynamic-rnn-teacher-force"
+):
     """
     Implementation of an rnn with teacher forcing inputs provided.
     Used in the same way as tf.dynamic_rnn.
     """
     inputs = array_ops.transpose(inputs, (1, 0, 2))
-    inputs_ta = tensor_array_ops.TensorArray(dtype=dtypes.float32, size=array_ops.shape(inputs)[0])
+    inputs_ta = tensor_array_ops.TensorArray(
+        dtype=dtypes.float32, size=array_ops.shape(inputs)[0]
+    )
     inputs_ta = inputs_ta.unstack(inputs)
 
     def loop_fn(time, cell_output, cell_state, loop_state):
@@ -197,18 +255,33 @@ def rnn_teacher_force(inputs, cell, sequence_length, initial_state, scope='dynam
 
         next_input = control_flow_ops.cond(
             finished,
-            lambda: array_ops.zeros([array_ops.shape(inputs)[1], inputs.shape.as_list()[2]], dtype=dtypes.float32),
-            lambda: inputs_ta.read(time)
+            lambda: array_ops.zeros(
+                [array_ops.shape(inputs)[1], inputs.shape.as_list()[2]],
+                dtype=dtypes.float32,
+            ),
+            lambda: inputs_ta.read(time),
         )
 
         next_loop_state = None
-        return (elements_finished, next_input, next_cell_state, emit_output, next_loop_state)
+        return (
+            elements_finished,
+            next_input,
+            next_cell_state,
+            emit_output,
+            next_loop_state,
+        )
 
     states, outputs, final_state = raw_rnn(cell, loop_fn, scope=scope)
     return states, outputs, final_state
 
 
-def rnn_free_run(cell, initial_state, sequence_length, initial_input=None, scope='dynamic-rnn-free-run'):
+def rnn_free_run(
+    cell,
+    initial_state,
+    sequence_length,
+    initial_input=None,
+    scope="dynamic-rnn-free-run",
+):
     """
     Implementation of an rnn which feeds its feeds its predictions back to itself at the next timestep.
 
@@ -228,20 +301,27 @@ def rnn_free_run(cell, initial_state, sequence_length, initial_input=None, scope
         next_cell_state = initial_state if cell_output is None else cell_state
 
         elements_finished = math_ops.logical_or(
-            time >= sequence_length,
-            cell.termination_condition(next_cell_state)
+            time >= sequence_length, cell.termination_condition(next_cell_state)
         )
         finished = math_ops.reduce_all(elements_finished)
 
         next_input = control_flow_ops.cond(
             finished,
             lambda: array_ops.zeros_like(initial_input),
-            lambda: initial_input if cell_output is None else cell.output_function(next_cell_state)
+            lambda: initial_input
+            if cell_output is None
+            else cell.output_function(next_cell_state),
         )
         emit_output = next_input[0] if cell_output is None else next_input
 
         next_loop_state = None
-        return (elements_finished, next_input, next_cell_state, emit_output, next_loop_state)
+        return (
+            elements_finished,
+            next_input,
+            next_cell_state,
+            emit_output,
+            next_loop_state,
+        )
 
     states, outputs, final_state = raw_rnn(cell, loop_fn, scope=scope)
     return states, outputs, final_state
