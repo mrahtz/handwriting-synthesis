@@ -71,6 +71,7 @@ class TFBaseModel(object):
         log_dir="logs",
         checkpoint_dir="checkpoints",
         prediction_dir="predictions",
+        seed=0,
     ):
         assert len(batch_sizes) == len(learning_rates) == len(patiences)
         self.batch_sizes = batch_sizes
@@ -79,6 +80,7 @@ class TFBaseModel(object):
         self.patiences = patiences
         self.num_restarts = len(batch_sizes) - 1
         self.restart_idx = 0
+        self.seed = seed
         self.update_train_params()
 
         self.reader = reader
@@ -445,6 +447,7 @@ class TFBaseModel(object):
 
     def build_graph(self):
         with tf.Graph().as_default() as graph:
+            tf.set_random_seed(self.seed)
             self.ema = tf.train.ExponentialMovingAverage(decay=0.99)
             self.global_step = tf.Variable(0, trainable=False)
             self.learning_rate_var = tf.Variable(0.0, trainable=False)

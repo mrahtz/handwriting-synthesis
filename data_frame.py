@@ -39,7 +39,8 @@ class DataFrame(object):
         return pd.Series(dict(zip(self.columns, [mat.dtype for mat in self.data])))
 
     def shuffle(self):
-        np.random.shuffle(self.idx)
+        rng = np.random.default_rng(seed=0)
+        rng.shuffle(self.idx)
 
     def train_test_split(
         self, train_size, random_state=np.random.randint(1000), stratify=None
