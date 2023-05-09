@@ -178,7 +178,7 @@ if __name__ == "__main__":
         "I'll tell you how I became the prince of a town called Bel-Air",
     ]
     biases = [0.75 for i in lines]
-    styles = [9 for i in lines]
+    styles = None
     stroke_colors = ["red", "green", "black", "blue"]
     stroke_widths = [1, 2, 1, 2]
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     # demo number 1 - fixed bias, fixed style
     lines = lyrics.all_star.split("\n")
     biases = [0.75 for i in lines]
-    styles = [12 for i in lines]
+    styles = None
 
     hand.write(
         filename="img/all_star.svg",
@@ -203,22 +203,10 @@ if __name__ == "__main__":
         styles=styles,
     )
 
-    # demo number 2 - fixed bias, varying style
-    lines = lyrics.downtown.split("\n")
-    biases = [0.75 for i in lines]
-    styles = np.cumsum(np.array([len(i) for i in lines]) == 0).astype(int)
-
-    hand.write(
-        filename="img/downtown.svg",
-        lines=lines,
-        biases=biases,
-        styles=styles,
-    )
-
-    # demo number 3 - varying bias, fixed style
+    # demo number 2 - varying bias, fixed style
     lines = lyrics.give_up.split("\n")
     biases = 0.2 * np.flip(np.cumsum([len(i) == 0 for i in lines]), 0)
-    styles = [7 for i in lines]
+    styles = None
 
     hand.write(
         filename="img/give_up.svg",
