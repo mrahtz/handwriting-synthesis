@@ -53,7 +53,8 @@ def collect_data():
 
     # low quality samples (selected by collecting samples to
     # which the trained model assigned very low likelihood)
-    blacklist = set(np.load("data/blacklist.npy"))
+    # blacklist = set(np.load("data/blacklist.npy"))
+    blacklist = {}
 
     stroke_fnames, transcriptions, writer_ids = [], [], []
     for i, fname in enumerate(fnames):
