@@ -74,12 +74,12 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
     def __call__(self, inputs, state, scope=None):
         with tf.variable_scope(scope or type(self).__name__, reuse=tf.AUTO_REUSE):
             # lstm 1
-            s1_in = tf.concat([state.w, inputs], axis=1)
+            layer_1_input = tf.concat([state.w, inputs], axis=1)
             cell1 = tf.contrib.rnn.LSTMCell(self.lstm_size)
-            s1_out, s1_state = cell1(s1_in, state=(state.c1, state.h1))
+            layer_1_output, layer_1_state = cell1(layer_1_input, state=(state.c1, state.h1))
 
             # attention
-            attention_inputs = tf.concat([state.w, inputs, s1_out], axis=1)
+            attention_inputs = tf.concat([state.w, inputs, layer_1_output], axis=1)
             attention_params = dense_layer(
                 attention_inputs,
                 3 * self.num_attn_mixture_components,
@@ -114,22 +114,22 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
             w = tf.reduce_sum(phi * self.attention_values * sequence_mask, axis=1)
 
             # lstm 2
-            s2_in = tf.concat([inputs, s1_out, w], axis=1)
+            layer_2_input = tf.concat([inputs, layer_1_output, w], axis=1)
             cell2 = tf.contrib.rnn.LSTMCell(self.lstm_size)
-            s2_out, s2_state = cell2(s2_in, state=(state.c2, state.h2))
+            layer_2_output, layer_2_state = cell2(layer_2_input, state=(state.c2, state.h2))
 
             # lstm 3
-            s3_in = tf.concat([inputs, s2_out, w], axis=1)
+            layer_3_input = tf.concat([inputs, layer_2_output, w], axis=1)
             cell3 = tf.contrib.rnn.LSTMCell(self.lstm_size)
-            s3_out, s3_state = cell3(s3_in, state=(state.c3, state.h3))
+            layer_3_out, layer_3_state = cell3(layer_3_input, state=(state.c3, state.h3))
 
             new_state = LSTMAttentionCellState(
-                s1_state.h,
-                s1_state.c,
-                s2_state.h,
-                s2_state.c,
-                s3_state.h,
-                s3_state.c,
+                layer_1_state.h,
+                layer_1_state.c,
+                layer_2_state.h,
+                layer_2_state.c,
+                layer_3_state.h,
+                layer_3_state.c,
                 alpha_flat,
                 beta_flat,
                 kappa_flat,
@@ -137,7 +137,7 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
                 phi_flat,
             )
 
-            return s3_out, new_state
+            return layer_3_out, new_state
 
     def output_function(self, state):
         params = dense_layer(
@@ -173,7 +173,7 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
         coords = tf.gather_nd(sampled_coords, idx)
         return tf.concat([coords, tf.cast(sampled_e, tf.float32)], axis=1)
 
-    def termination_condition(self, state):
+    def termination_condition(self, state: LSTMAttentionCellState):
         char_idx = tf.cast(tf.argmax(state.phi, axis=1), tf.int32)
         final_char = char_idx >= self.attention_values_lengths - 1
         past_final_char = char_idx >= self.attention_values_lengths
