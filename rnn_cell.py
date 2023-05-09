@@ -1,4 +1,5 @@
 from collections import namedtuple
+import typing
 
 import tensorflow as tf
 import tensorflow.contrib.distributions as tfd
@@ -7,10 +8,18 @@ import numpy as np
 from tf_utils import dense_layer, shape
 
 
-LSTMAttentionCellState = namedtuple(
-    "LSTMAttentionCellState",
-    ["h1", "c1", "h2", "c2", "h3", "c3", "alpha", "beta", "kappa", "w", "phi"],
-)
+class LSTMAttentionCellState(typing.NamedTuple):
+    h1: tf.Tensor
+    c1: tf.Tensor
+    h2: tf.Tensor
+    c2: tf.Tensor
+    h3: tf.Tensor
+    c3: tf.Tensor
+    alpha: tf.Tensor
+    beta: tf.Tensor
+    kappa: tf.Tensor
+    w: tf.Tensor
+    phi: tf.Tensor
 
 
 class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
@@ -39,17 +48,17 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
     @property
     def state_size(self):
         return LSTMAttentionCellState(
-            self.lstm_size,
-            self.lstm_size,
-            self.lstm_size,
-            self.lstm_size,
-            self.lstm_size,
-            self.lstm_size,
-            self.num_attn_mixture_components,
-            self.num_attn_mixture_components,
-            self.num_attn_mixture_components,
-            self.window_size,
-            self.char_len,
+            h1=self.lstm_size,
+            c1=self.lstm_size,
+            h2=self.lstm_size,
+            c2=self.lstm_size,
+            h3=self.lstm_size,
+            c3=self.lstm_size,
+            alpha=self.num_attn_mixture_components,
+            beta=self.num_attn_mixture_components,
+            kappa=self.num_attn_mixture_components,
+            w=self.window_size,
+            phi=self.char_len,
         )
 
     @property
