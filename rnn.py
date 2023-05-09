@@ -20,9 +20,11 @@ sacred_observer = sacred.observers.FileStorageObserver("experiments")
 experiment.observers.append(sacred_observer)
 
 
+# noinspection PyUnusedLocal
 @experiment.config
 def config():
     seed = 0
+    num_training_steps = 100_000
 
 
 class DataReader(object):
@@ -233,10 +235,11 @@ class rnn(TFBaseModel):
 
 @experiment.automain
 @sacred.stflow.LogFileWriter(experiment)
-def main(seed: int):
+def main(seed: int, num_training_steps: int, experiment_path: pathlib.Path):
     dr = DataReader(data_dir="data/processed/")
 
-    experiment_path = pathlib.Path(sacred_observer.dir)
+    if experiment_path is None:
+        experiment_path = pathlib.Path(sacred_observer.dir)
     nn = rnn(
         reader=dr,
         log_dir=experiment_path / "logs",
@@ -248,7 +251,7 @@ def main(seed: int):
         beta1_decays=[0.9, 0.9, 0.9],
         validation_batch_size=32,
         optimizer="rms",
-        num_training_steps=100000,
+        num_training_steps=num_training_steps,
         warm_start_init_step=0,
         regularization_constant=0.0,
         keep_prob=1.0,
