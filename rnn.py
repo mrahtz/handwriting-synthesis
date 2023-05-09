@@ -20,6 +20,11 @@ sacred_observer = sacred.observers.FileStorageObserver("experiments")
 experiment.observers.append(sacred_observer)
 
 
+@experiment.config
+def config():
+    seed = 0
+
+
 class DataReader(object):
     def __init__(self, data_dir):
         data_cols = ["x", "x_len", "c", "c_len"]
@@ -228,7 +233,7 @@ class rnn(TFBaseModel):
 
 @experiment.automain
 @sacred.stflow.LogFileWriter(experiment)
-def main():
+def main(seed: int):
     dr = DataReader(data_dir="data/processed/")
 
     experiment_path = pathlib.Path(sacred_observer.dir)
@@ -254,6 +259,7 @@ def main():
         lstm_size=400,
         output_mixture_components=20,
         attention_mixture_components=10,
+        seed=seed,
     )
     nn.fit()
 
