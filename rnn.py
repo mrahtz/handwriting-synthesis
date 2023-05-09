@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import pathlib
+import typing
 
 import numpy as np
 import sacred
@@ -235,7 +236,7 @@ class rnn(TFBaseModel):
 
 @experiment.automain
 @sacred.stflow.LogFileWriter(experiment)
-def main(seed: int, num_training_steps: int, experiment_path: pathlib.Path):
+def main(seed: int, num_training_steps: int, experiment_path: typing.Optional[pathlib.Path] = None):
     dr = DataReader(data_dir="data/processed/")
 
     if experiment_path is None:
