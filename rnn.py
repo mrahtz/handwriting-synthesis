@@ -1,5 +1,8 @@
 from __future__ import print_function
 import os
+
+import tf_base_model
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Silence INFO messages.
 import pathlib
 import typing
@@ -237,7 +240,11 @@ class rnn(TFBaseModel):
 
 @experiment.automain
 @sacred.stflow.LogFileWriter(experiment)
-def main(seed: int, num_training_steps: int, experiment_path: typing.Optional[pathlib.Path] = None):
+def main(
+        seed: int,
+        num_training_steps: int,
+        experiment_path: typing.Optional[pathlib.Path] = None,
+) -> tf_base_model.TrainLossHistory:
     dr = DataReader(data_dir="data/processed/")
 
     if experiment_path is None:
@@ -266,4 +273,4 @@ def main(seed: int, num_training_steps: int, experiment_path: typing.Optional[pa
         attention_mixture_components=10,
         seed=seed,
     )
-    nn.fit()
+    return nn.fit()
