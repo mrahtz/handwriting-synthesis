@@ -1,5 +1,7 @@
 import os
+import pathlib
 import logging
+from typing import Optional
 
 import numpy as np
 import svgwrite
@@ -10,12 +12,17 @@ from rnn import rnn
 
 
 class Hand(object):
-    def __init__(self):
+    def __init__(
+            self,
+            log_dir: str = "logs",
+            checkpoint_dir: str = "checkpoints",
+            prediction_dir: str = "predictions",
+    ):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
         self.nn = rnn(
-            log_dir="logs",
-            checkpoint_dir="checkpoints",
-            prediction_dir="predictions",
+            log_dir=log_dir,
+            checkpoint_dir=checkpoint_dir,
+            prediction_dir=prediction_dir,
             learning_rates=[0.0001, 0.00005, 0.00002],
             batch_sizes=[32, 64, 64],
             patiences=[1500, 1000, 500],
