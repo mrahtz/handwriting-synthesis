@@ -108,7 +108,6 @@ class TFBaseModel(object):
             self.checkpoint_dir_averaged = checkpoint_dir + "_avg"
 
         self.init_logging(self.log_dir)
-        logging.info("\nnew run with parameters:\n{}".format(pp.pformat(self.__dict__)))
 
         self.graph = self.build_graph()
         config = tf.ConfigProto()
@@ -423,21 +422,6 @@ class TFBaseModel(object):
                 self.step = tf.group(maintain_averages_op)
         else:
             self.step = step
-
-        logging.info("all parameters:")
-        logging.info(
-            pp.pformat([(var.name, shape(var)) for var in tf.global_variables()])
-        )
-
-        logging.info("trainable parameters:")
-        logging.info(
-            pp.pformat([(var.name, shape(var)) for var in tf.trainable_variables()])
-        )
-
-        logging.info("trainable parameter count:")
-        logging.info(
-            str(np.sum(np.prod(shape(var)) for var in tf.trainable_variables()))
-        )
 
     def get_optimizer(self, learning_rate, beta1_decay):
         if self.optimizer == "adam":
