@@ -267,7 +267,3 @@ def main(seed: int, num_training_steps: int, experiment_path: typing.Optional[pa
         seed=seed,
     )
     nn.fit()
-
-
-if __name__ == "__main__":
-    main()
