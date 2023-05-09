@@ -5,11 +5,15 @@ import logging
 import os
 import pprint as pp
 import time
+from typing import List
 
 import numpy as np
 import tensorflow as tf
 
 from tf_utils import shape
+
+
+TrainLossHistory = List[int]
 
 
 class TFBaseModel(object):
@@ -121,7 +125,7 @@ class TFBaseModel(object):
     def calculate_loss(self):
         raise NotImplementedError("subclass must implement this")
 
-    def fit(self):
+    def fit(self) -> TrainLossHistory:
         with self.session.as_default():
             if self.warm_start_init_step:
                 self.restore(self.warm_start_init_step)
@@ -284,6 +288,8 @@ class TFBaseModel(object):
                     self.save(step, averaged=True)
 
             logging.info("num_training_steps reached - ending training")
+
+        return list(train_loss_history)
 
     def predict(self, chunk_size=256):
         if not os.path.isdir(self.prediction_dir):
