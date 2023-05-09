@@ -279,5 +279,5 @@ def rnn_free_run(
             next_loop_state,
         )
 
-    states, outputs, final_state = raw_rnn(cell, loop_fn, scope=scope)
-    return states, outputs, final_state
+    _, outputs, _ = raw_rnn(cell, loop_fn, scope=scope)
+    return outputs

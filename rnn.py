@@ -173,7 +173,7 @@ class rnn(TFBaseModel):
             initial_state=initial_state,
             initial_input=initial_input,
             scope="rnn",
-        )[1]
+        )
 
     # Only used by demo.py.
     def primed_sample(self, cell):
@@ -191,7 +191,7 @@ class rnn(TFBaseModel):
             sequence_length=self.sample_tsteps,
             initial_state=primed_state,
             scope="rnn",
-        )[1]
+        )
 
     def calculate_loss(self):
         self.x = tf.compat.v1.placeholder(tf.float32, [None, None, 3])
