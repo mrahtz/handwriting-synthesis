@@ -81,7 +81,7 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
         )
 
     def __call__(self, inputs, state, scope=None):
-        with tf.variable_scope(scope or type(self).__name__, reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope(scope or type(self).__name__, reuse=tf.compat.v1.AUTO_REUSE):
             # lstm 1
             layer_1_input = tf.concat([state.w, inputs], axis=1)
             cell1 = tf.contrib.rnn.LSTMCell(self.lstm_size)
@@ -150,7 +150,7 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
 
     def output_function(self, state):
         params = dense_layer(
-            state.h3, self.output_units, scope="gmm", reuse=tf.AUTO_REUSE
+            state.h3, self.output_units, scope="gmm", reuse=tf.compat.v1.AUTO_REUSE
         )
         pis, mus, sigmas, rhos, es = self._parse_parameters(params)
         mu1, mu2 = tf.split(mus, 2, axis=1)
@@ -189,7 +189,7 @@ class LSTMAttentionCell(tf.nn.rnn_cell.RNNCell):
         output = self.output_function(state)
         es = tf.cast(output[:, 2], tf.int32)
         is_eos = tf.equal(es, tf.ones_like(es))
-        return tf.logical_or(tf.logical_and(final_char, is_eos), past_final_char)
+        return tf.math.logical_or(tf.math.logical_and(final_char, is_eos), past_final_char)
 
     def _parse_parameters(self, gmm_params, eps=1e-8, sigma_eps=1e-4):
         pis, sigmas, rhos, mus, es = tf.split(

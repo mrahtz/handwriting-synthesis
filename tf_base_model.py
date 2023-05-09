@@ -27,7 +27,7 @@ class TFBaseModel(object):
 
     Args:
         reader: Class with attributes train_batch_generator, val_batch_generator, and test_batch_generator
-            that yield dictionaries mapping tf.placeholder names (as strings) to batch data (numpy arrays).
+            that yield dictionaries mapping tf.compat.v1.placeholder names (as strings) to batch data (numpy arrays).
         batch_size: Minibatch size.
         learning_rate: Learning rate.
         optimizer: 'rms' for RMSProp, 'adam' for Adam, 'sgd' for SGD
@@ -110,9 +110,9 @@ class TFBaseModel(object):
         self.init_logging(self.log_dir)
 
         self.graph = self.build_graph()
-        config = tf.ConfigProto()
+        config = tf.compat.v1.ConfigProto()
         config.gpu_options.allow_growth = True
-        self.session = tf.Session(graph=self.graph, config=config)
+        self.session = tf.compat.v1.Session(graph=self.graph, config=config)
         logging.info("built graph")
 
     def update_train_params(self):
@@ -412,7 +412,7 @@ class TFBaseModel(object):
             for g, v_ in grads
         ]
 
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             step = optimizer.apply_gradients(clipped, global_step=self.global_step)
 
@@ -429,7 +429,7 @@ class TFBaseModel(object):
         elif self.optimizer == "gd":
             return tf.train.GradientDescentOptimizer(learning_rate)
         elif self.optimizer == "rms":
-            return tf.train.RMSPropOptimizer(
+            return tf.compat.v1.train.RMSPropOptimizer(
                 learning_rate, decay=beta1_decay, momentum=0.9
             )
         else:
@@ -437,7 +437,7 @@ class TFBaseModel(object):
 
     def build_graph(self):
         with tf.Graph().as_default() as graph:
-            tf.set_random_seed(self.seed)
+            tf.compat.v1.set_random_seed(self.seed)
             self.ema = tf.train.ExponentialMovingAverage(decay=0.99)
             self.global_step = tf.Variable(0, trainable=False)
             self.learning_rate_var = tf.Variable(0.0, trainable=False)
@@ -446,11 +446,11 @@ class TFBaseModel(object):
             self.loss = self.calculate_loss()
             self.update_parameters(self.loss)
 
-            self.saver = tf.train.Saver(max_to_keep=1)
+            self.saver = tf.compat.v1.train.Saver(max_to_keep=1)
             if self.enable_parameter_averaging:
-                self.saver_averaged = tf.train.Saver(
+                self.saver_averaged = tf.compat.v1.train.Saver(
                     self.ema.variables_to_restore(), max_to_keep=1
                 )
 
-            self.init = tf.global_variables_initializer()
+            self.init = tf.compat.v1.global_variables_initializer()
             return graph
