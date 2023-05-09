@@ -220,7 +220,6 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
 
         flat_states = nest.flatten(state_ta)
         flat_states = [array_ops.transpose(ta.stack(), (1, 0, 2)) for ta in flat_states]
-        states = nest.pack_sequence_as(structure=state_ta, flat_sequence=flat_states)
 
         flat_outputs = nest.flatten(emit_ta)
         flat_outputs = [
