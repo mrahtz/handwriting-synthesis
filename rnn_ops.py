@@ -231,48 +231,6 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
         return (states, outputs, final_state)
 
 
-def rnn_teacher_force(
-    inputs, cell, sequence_length, initial_state, scope="dynamic-rnn-teacher-force"
-):
-    """
-    Implementation of an rnn with teacher forcing inputs provided.
-    Used in the same way as tf.dynamic_rnn.
-    """
-    inputs = array_ops.transpose(inputs, (1, 0, 2))
-    inputs_ta = tensor_array_ops.TensorArray(
-        dtype=dtypes.float32, size=array_ops.shape(inputs)[0]
-    )
-    inputs_ta = inputs_ta.unstack(inputs)
-
-    def loop_fn(time, cell_output, cell_state, loop_state):
-        emit_output = cell_output
-        next_cell_state = initial_state if cell_output is None else cell_state
-
-        elements_finished = time >= sequence_length
-        finished = math_ops.reduce_all(elements_finished)
-
-        next_input = control_flow_ops.cond(
-            finished,
-            lambda: array_ops.zeros(
-                [array_ops.shape(inputs)[1], inputs.shape.as_list()[2]],
-                dtype=dtypes.float32,
-            ),
-            lambda: inputs_ta.read(time),
-        )
-
-        next_loop_state = None
-        return (
-            elements_finished,
-            next_input,
-            next_cell_state,
-            emit_output,
-            next_loop_state,
-        )
-
-    states, outputs, final_state = raw_rnn(cell, loop_fn, scope=scope)
-    return states, outputs, final_state
-
-
 def rnn_free_run(
     cell,
     initial_state,
