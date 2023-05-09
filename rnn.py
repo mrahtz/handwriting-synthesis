@@ -157,6 +157,7 @@ class rnn(TFBaseModel):
         element_loss = tf.reduce_sum(nll) / tf.maximum(tf.reduce_sum(num_valid), 1.0)
         return sequence_loss, element_loss
 
+    # Only used by demo.py.
     def sample(self, cell):
         initial_state = cell.zero_state(self.num_samples, dtype=tf.float32)
         initial_input = tf.concat(
@@ -174,6 +175,7 @@ class rnn(TFBaseModel):
             scope="rnn",
         )[1]
 
+    # Only used by demo.py.
     def primed_sample(self, cell):
         initial_state = cell.zero_state(self.num_samples, dtype=tf.float32)
         primed_state = tf.nn.dynamic_rnn(
@@ -232,6 +234,7 @@ class rnn(TFBaseModel):
             self.y, self.x_len, pis, mus, sigmas, rhos, es
         )
 
+        # Only used in demo.py.
         self.sampled_sequence = tf.cond(
             self.prime, lambda: self.primed_sample(cell), lambda: self.sample(cell)
         )
