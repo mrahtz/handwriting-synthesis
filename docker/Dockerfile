@@ -5,3 +5,4 @@ RUN apt update || true
 RUN apt install -y python3-tk
 RUN pip3 install sacred pytest
 RUN git config --global --add safe.directory /workspace
+RUN pip3 install ipython ipdb
