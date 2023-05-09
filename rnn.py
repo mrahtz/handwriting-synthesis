@@ -1,7 +1,10 @@
 from __future__ import print_function
 import os
+import pathlib
 
 import numpy as np
+import sacred
+import sacred.stflow
 import tensorflow as tf
 
 import drawing
@@ -10,6 +13,11 @@ from rnn_cell import LSTMAttentionCell
 from rnn_ops import rnn_free_run
 from tf_base_model import TFBaseModel
 from tf_utils import time_distributed_dense_layer
+
+
+experiment = sacred.Experiment("handwriting")
+sacred_observer = sacred.observers.FileStorageObserver("experiments")
+experiment.observers.append(sacred_observer)
 
 
 class DataReader(object):
@@ -218,14 +226,17 @@ class rnn(TFBaseModel):
         return self.loss
 
 
-if __name__ == "__main__":
+@experiment.automain
+@sacred.stflow.LogFileWriter(experiment)
+def main():
     dr = DataReader(data_dir="data/processed/")
 
+    experiment_path = pathlib.Path(sacred_observer.dir)
     nn = rnn(
         reader=dr,
-        log_dir="logs",
-        checkpoint_dir="checkpoints",
-        prediction_dir="predictions",
+        log_dir=experiment_path / "logs",
+        checkpoint_dir=experiment_path / "checkpoints",
+        prediction_dir=experiment_path / "predictions",
         learning_rates=[0.0001, 0.00005, 0.00002],
         batch_sizes=[32, 64, 64],
         patiences=[1500, 1000, 500],
@@ -245,3 +256,7 @@ if __name__ == "__main__":
         attention_mixture_components=10,
     )
     nn.fit()
+
+
+if __name__ == "__main__":
+    main()
