@@ -258,7 +258,7 @@ def main(seed: int, num_training_steps: int, experiment_path: typing.Optional[pa
         keep_prob=1.0,
         enable_parameter_averaging=False,
         min_steps_to_checkpoint=2000,
-        log_interval=20,
+        log_interval=1,
         grad_clip=10,
         lstm_size=400,
         output_mixture_components=20,
