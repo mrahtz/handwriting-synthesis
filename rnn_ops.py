@@ -227,7 +227,7 @@ def raw_rnn(cell, loop_fn, parallel_iterations=None, swap_memory=False, scope=No
         ]
         outputs = nest.pack_sequence_as(structure=emit_ta, flat_sequence=flat_outputs)
 
-        return (None, outputs, None)
+        return outputs
 
 
 def rnn_free_run(
@@ -278,5 +278,5 @@ def rnn_free_run(
             next_loop_state,
         )
 
-    _, outputs, _ = raw_rnn(cell, loop_fn, scope=scope)
+    outputs = raw_rnn(cell, loop_fn, scope=scope)
     return outputs
